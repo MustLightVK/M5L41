@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Blog Posts</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+        }
+        form {
+            margin-bottom: 20px;
+        }
+        input, textarea, button {
+            margin: 5px;
+            padding: 10px;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+            font-size: 16px;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        button {
+            cursor: pointer;
+            font-size: 16px;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 5px;
+            color: white;
+        }
+        button#btnPost {
+            background-color: #007bff;
+        }
+        button#btnPost:hover {
+            background-color: #0056b3;
+        }
+        button#btnGet {
+            background-color: #28a745;
+        }
+        button#btnGet:hover {
+            background-color: #218838;
+        }
+        .post-wrapper {
+            margin-top: 20px;
+        }
+        .post {
+            border: 1px solid #ccc;
+            padding: 10px;
+            margin-bottom: 10px;
+            border-radius: 5px;
+        }
+        .post h3 {
+            margin-top: 0;
+            font-size: 20px;
+            background-color: #f8f9fa;
+            padding: 5px 10px;
+            border-radius: 5px;
+            display: inline-block;
+        }
+        .post h4 {
+            margin-bottom: 5px;
+            font-size: 18px;
+        }
+        .post p {
+            margin: 0;
+            font-size: 16px;
+        }
+        .btnDelete, .btnEdit {
+            margin-left: 5px;
+            padding: 8px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .btnDelete {
+            background-color: #dc3545;
+            color: white;
+            border: 1px solid #dc3545;
+        }
+        .btnEdit {
+            background-color: #ffc107;
+            color: black;
+            border: 1px solid #ffc107;
+        }
+        .btnDelete:hover, .btnEdit:hover {
+            background-color: #bd2130;
+            border-color: #bd2130;
+        }
+    </style>
+    
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+</head>
+<body>
+    <h1>Blog Posts</h1>
+    <form id="postForm">
+        <input type="number" name="id" id="postId" required placeholder="ID">
+        <input type="text" name="user" id="postUser" required placeholder="User">
+        <textarea name="body" id="postBody" required placeholder="Body"></textarea>
+        <button type="submit" id="btnPost">Добавить пост</button>
+    </form>
+    <button id="btnGet">Запросить посты</button>
+    <div class="post-wrapper" id="postsContainer">
+        <!-- Сюда будут добавляться посты с сервера -->
+    </div>
+
+    <script>
+        const url = 'http://127.0.0.1:3000/';
+
+        // Функция для отправки POST запроса на добавление поста
+        $('#postForm').submit(function(e) {
+            e.preventDefault();
+            const newPost = {
+                id: parseInt($('#postId').val()),
+                user: $('#postUser').val(),
+                body: $('#postBody').val()
+            };
+
+            // Проверяем корректность заполнения формы
+            if (!newPost.id || !newPost.user || !newPost.body) {
+                console.error('Заполните все поля перед отправкой.');
+                return;
+            }
+
+            $.ajax({
+                url: url,
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify(newPost),
+                success: function(data) {
+                    console.log('Успешно добавлен пост:', data);
+                    $('#postsContainer').append(
+                        `<div class="post" data-id="${data.id}">
+                            <h3>${data.id}</h3>
+                            <h4>${data.user}</h4>
+                            <p>${data.body}</p>
+                            <button class="btnDelete">Удалить</button>
+                            <button class="btnEdit">Изменить</button>
+                        </div>`
+                    );
+                    // Очищаем форму после успешного добавления
+                    $('#postId').val('');
+                    $('#postUser').val('');
+                    $('#postBody').val('');
+                },
+                error: function(xhr, status, error) {
+                    console.error('Ошибка при добавлении поста:', error);
+                }
+            });
+        });
+
+        // Функция для запроса всех постов
+        $('#btnGet').click(function() {
+            $.ajax({
+                url: url,
+                type: 'GET',
+                success: function(data) {
+                    console.log('Получены данные:', data);
+                    $('#postsContainer').empty(); // Очищаем содержимое контейнера
+                    data.forEach(post => {
+                        $('#postsContainer').append(
+                            `<div class="post" data-id="${post.id}">
+                                <h3>${post.id}</h3>
+                                <h4>${post.user}</h4>
+                                <p>${post.body}</p>
+                                <button class="btnDelete">Удалить</button>
+                                <button class="btnEdit">Изменить</button>
+                            </div>`
+                        );
+                    });
+                },
+                error: function(xhr, status, error) {
+                    console.error('Ошибка при получении данных:', error);
+                }
+            });
+        });
+
+        // Обработчик кнопок "Удалить"
+        $('#postsContainer').on('click', '.btnDelete', function() {
+            const postId = $(this).closest('.post').attr('data-id');
+            const postElement = $(this).closest('.post');
+
+            $.ajax({
+                url: url + postId,
+                type: 'DELETE',
+                success: function() {
+                    console.log('Пост успешно удален:', postId);
+                    postElement.remove(); // Удаляем соответствующий HTML элемент
+                },
+                error: function(xhr, status, error) {
+                    console.error('Ошибка при удалении поста:', error);
+                }
+            });
+        });
+
+        // Обработчик кнопок "Изменить"
+        $('#postsContainer').on('click', '.btnEdit', function() {
+            const postElement = $(this).closest('.post');
+            const postId = postElement.attr('data-id');
+
+            // Переключаем форму в режим редактирования
+            $('#postId').val(postId);
+            $('#postUser').val(postElement.find('h4').text());
+            $('#postBody').val(postElement.find('p').text());
+
+            // При отправке формы, выполним PUT запрос на обновление данных
+            $('#postForm').off('submit').on('submit', function(e) {
+                e.preventDefault();
+                const updatedPost = {
+                    id: parseInt($('#postId').val()),
+                    user: $('#postUser').val(),
+                    body: $('#postBody').val()
+                };
+
+                $.ajax({
+                    url: url + postId,
+                    type: 'PUT',
+                    contentType: 'application/json',
+                    data: JSON.stringify(updatedPost),
+                    success: function(data) {
+                        console.log('Пост успешно обновлен:', data);
+                        // Обновляем данные в отображении поста
+                        postElement.find('h4').text(data.user);
+                        postElement.find('p').text(data.body);
+
+                        // Очищаем форму после обновления
+                        $('#postId').val('');
+                        $('#postUser').val('');
+                        $('#postBody').val('');
+                    },
+                    error: function(xhr, status, error) {
+                        console.error('Ошибка при обновлении поста:', error);
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+</html>
